@@ -27,7 +27,7 @@ This script will not work unless the user has write access to the relevant backl
 
 This can be achieved via a udev rule which modifies the group and write permissions.
 
-This repository includes an example rule which should work for "intel_backlight" devices. This is installed automatically by the PKGBUILD file or can be installed manually by copying it to /etc/udev/rulles.d
+This repository includes an example rule which should work for "intel_backlight" devices. This is installed automatically by the PKGBUILD file or can be installed manually by copying it to /etc/udev/rules.d
 
 You should then ensure that your user is a member of the "video" group.
 
