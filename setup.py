@@ -8,5 +8,5 @@ setup(
     author='elParaguayo',
     url='https://github.com/elparaguayo/qtile-brightnesscontrol',
     license='MIT',
-    install_requires=['qtile>0.14.2']
+    install_requires=['qtile>0.14.2', 'pydbus']
 )

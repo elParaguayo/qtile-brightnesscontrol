@@ -8,7 +8,7 @@ pkgdesc="Qtile code to control and display screen brightness."
 url="https://github.com/elparaguayo/qtile-brightnesscontrol.git"
 arch=("any")
 license=("MIT")
-depends=("python" "qtile")
+depends=("python" "qtile" "python-pydbus")
 source=("git+https://github.com/elparaguayo/$_pkgname.git")
 md5sums=("SKIP")
 

@@ -1,4 +1,5 @@
 import os
+import pydbus
 import re
 import subprocess
 
@@ -8,6 +9,8 @@ from libqtile.log_utils import logger
 
 MODULE_NAME = "BrightnessControl"
 ERROR_VALUE = -1
+
+UPOWER = ".UPower"
 
 
 class BrightnessControl(object):
@@ -86,14 +89,22 @@ class BrightnessControl(object):
             # Calculate the new value
             newval = self.current + step
 
+            self._set_brightness(newval)
+
+        else:
+            self._set_brightness(ERROR_VALUE)
+
+    def _set_brightness(self, value):
+
+        if value != ERROR_VALUE:
             # Limit brightness so that min <= value <= max
-            newval = max(min(newval, self.max), self.min)
+            newval = max(min(value, self.max), self.min)
 
-            # Set the new value
-            success = self.set_current(newval)
-
-            # Do we need to trigger callbacks
+            # Do we need to set value and trigger callbacks
             if newval != self.old:
+
+                # Set the new value
+                success = self._set_current(newval)
 
                 # If we couldn't set value, send the error value
                 percentage = newval / self.max if success else ERROR_VALUE
@@ -104,9 +115,8 @@ class BrightnessControl(object):
                 if self.widget_callback:
                     self.widget_callback(percentage)
 
-            # Set the previous value
-            self.old = newval
-
+                # Set the previous value
+                self.old = newval
         # We should send callbacks if we couldn't read current or max value
         # e.g. to alert user to failure
         else:
@@ -116,7 +126,6 @@ class BrightnessControl(object):
 
             if self.widget_callback:
                 self.widget_callback(ERROR_VALUE)
-
 
     def _read(self, path):
         "Simple method to read value from given path"
@@ -154,7 +163,7 @@ class BrightnessControl(object):
                            "Module may behave unexpectedly.")
         return current
 
-    def set_current(self, newval):
+    def _set_current(self, newval):
         "Set the brightness level for the device"
 
         try:
@@ -180,6 +189,17 @@ class BrightnessControl(object):
 
         self.change_brightness(self.step * -1)
 
+    def set_brightness_value(self, value, *args, **kwargs):
+        "Set brightess to set value"
+
+        self._set_brightness(value)
+
+    def set_brightness_percent(self, percent, *args, **kwargs):
+        "Set brightness to percentage (0.0-1.0) of max value"
+
+        value = int(self.max * percent)
+        self._set_brightness(value)
+
     def Widget(self, **config):
         "Create an instance of the BrightnessControlWidget"
 
@@ -203,7 +223,17 @@ class BrightnessControlWidget(base._Widget):
         ("error_colour", "880000", "Colour of bar when displaying an error"),
         ("timeout_interval", 5, "Time before widet is hidden."),
         ("widget_width", 75, "Width of bar when widget displayed"),
-
+        ("enable_power_saving", True, "Automatically set brightness depending on status"),
+        (
+         "brightness_on_mains",
+         "100%",
+         "Brightness level on mains power (accepts integer value or percentage as string)"
+         ),
+        (
+         "brightness_on_battery",
+         "50%",
+         "Brightness level on battery power (accepts integer value or percentage as string)"
+         ),
     ]
 
 
@@ -224,11 +254,43 @@ class BrightnessControlWidget(base._Widget):
         # Hide the widget by default
         self.hidden = True
 
+        if self.enable_power_saving:
+            self.setup_power_saving()
+
     def _configure(self, qtile, bar):
         base._Widget._configure(self, qtile, bar)
         # Calculate how much space we need to show text
         self.text_width = self.max_text_width()
         self.update()
+
+    def setup_power_saving(self):
+
+        bus = pydbus.SystemBus()
+        self.upower = bus.get(UPOWER)
+        self.onbattery = None
+        self.upower.onPropertiesChanged = self.power_change
+
+    def power_change(self, *args):
+        onbattery = self.upower.OnBattery
+
+        if onbattery != self.onbattery:
+            if onbattery:
+                value = self.brightness_on_battery
+            else:
+                value = self.brightness_on_mains
+
+            if type(value) == int:
+                self.helper.set_brightness_value(value)
+            elif type(value) == str and value.endswith("%"):
+                try:
+                    percent = int(value[:-1])
+                    self.helper.set_brightness_percent(percent / 100)
+                except ValueError:
+                    logger.error("Incorrectly formatted brightness: {}".format(value))
+            else:
+                logger.warning("Unrecognised value for brightness: {}".format(value))
+
+            self.onbattery = onbattery
 
     def max_text_width(self):
 

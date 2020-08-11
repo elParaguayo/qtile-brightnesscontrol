@@ -136,6 +136,18 @@ The widget can be customised with the following arguments:
             <td>widget_width</td>
             <td>Width of bar when widget displayed</td>
     </tr>
+    <tr>
+            <td>enable_power_saving</td>
+            <td>Automatically set brightness depending on status (mains or battery)</td>
+    </tr>
+    <tr>
+            <td>brightness_on_mains</td>
+            <td>Brightness level on mains power (accepts integer value or percentage as string)</td>
+    </tr>
+    <tr>
+            <td>brightness_on_battery</td>
+            <td>Brightness level on battery power (accepts integer value or percentage as string)</td>
+    </tr>
 </table>
 
 ## Contributing
